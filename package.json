@@ -1,7 +1,7 @@
 {
   "name": "overlay-inspector-server",
   "version": "1.0.0",
-  "description": "Local WebSocket server for the Overlay Inspector Android app",
+  "description": "Local WebSocket server for the Zircon Android app",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

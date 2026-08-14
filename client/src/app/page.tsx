@@ -7,12 +7,12 @@ import { EventFeed } from "@/components/ui/EventFeed";
 import { Tabs } from "@/components/ui/Tabs";
 import { CommandPane } from "@/components/layout/CommandPane";
 import { AnimatePresence, motion } from "framer-motion";
-import { 
-  TerminalSquare, 
-  Smartphone, 
-  Server, 
-  Layers, 
-  Activity, 
+import {
+  TerminalSquare,
+  Smartphone,
+  Server,
+  Layers,
+  Activity,
   Trash2,
   Clock,
   Radio
@@ -56,9 +56,9 @@ export default function Dashboard() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white shadow-inner">
             <TerminalSquare size={18} />
           </div>
-          <h1 className="text-sm font-semibold tracking-wide">Overlay Inspector</h1>
+          <h1 className="text-sm font-semibold tracking-wide">Zircon</h1>
         </div>
-        
+
         <div className="flex-1" />
 
         <div className="flex items-center gap-3">
@@ -69,15 +69,15 @@ export default function Dashboard() {
             <Radio size={12} className="animate-pulse" />
             Live Streams
           </Link>
-          <StatusBadge 
-            status={state.deviceConnected} 
-            label={state.deviceConnected ? "Android Online" : "No Device"} 
-            icon={<Smartphone size={14} />} 
+          <StatusBadge
+            status={state.deviceConnected}
+            label={state.deviceConnected ? "Android Online" : "No Device"}
+            icon={<Smartphone size={14} />}
           />
-          <StatusBadge 
-            status={state.wsConnected} 
-            label={state.wsConnected ? "Server Active" : "Reconnecting..."} 
-            icon={<Server size={14} />} 
+          <StatusBadge
+            status={state.wsConnected}
+            label={state.wsConnected ? "Server Active" : "Reconnecting..."}
+            icon={<Server size={14} />}
           />
           <div className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1.5 text-xs text-neutral-400">
             <Clock size={12} />
@@ -88,7 +88,7 @@ export default function Dashboard() {
 
       {/* Main Content Grid */}
       <main className="relative z-10 flex flex-1 overflow-hidden p-6 gap-6">
-        
+
         {/* Left Sidebar - Stats & Status */}
         <aside className="flex w-72 flex-col gap-4">
           <AnimatedCard title="Active Window" delay={0.1}>
@@ -132,8 +132,8 @@ export default function Dashboard() {
         {/* Center - Event Feed */}
         <section className="flex flex-1 flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between">
-            <Tabs 
-              activeTab={filter} 
+            <Tabs
+              activeTab={filter}
               onChange={(id) => setFilter(id as any)}
               tabs={[
                 { id: "all", label: "All Events" },
@@ -141,11 +141,11 @@ export default function Dashboard() {
                 { id: "window", label: "Windows" },
                 { id: "sms", label: "SMS" },
                 { id: "clipboard", label: "Clipboard" }
-              ]} 
+              ]}
             />
             <div className="flex items-center gap-4">
               <span className="text-xs text-neutral-500">{state.events.length} events</span>
-              <button 
+              <button
                 onClick={clearEvents}
                 className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
               >
@@ -153,13 +153,13 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          
+
           <EventFeed events={state.events} filter={filter} />
         </section>
 
         {/* Right Sidebar - Commands */}
         <aside className="w-80 overflow-hidden">
-          <CommandPane 
+          <CommandPane
             onQuickTap={sendTap}
             onRunSequence={sendSequence}
           />

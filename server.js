@@ -1,5 +1,5 @@
 /**
- * Overlay Inspector — Local Server
+ * Zircon — Local Server
  * ─────────────────────────────────────────────────────────────────────────
  * • HTTP on :3000  → serves web console UI from /public
  * • WebSocket on the same port — two client types:
@@ -284,7 +284,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
         }
     }
     console.log(`\n╔══════════════════════════════════════════════════════════════╗`);
-    console.log(`║           Overlay Inspector Server                          ║`);
+    console.log(`║           Zircon Server                          ║`);
     console.log(`║  Web console:  http://${localIp}:${PORT}${''.padEnd(34 - localIp.length - String(PORT).length)}║`);
     console.log(`║  Android WS:   ws://${localIp}:${PORT}${''.padEnd(35 - localIp.length - String(PORT).length)}║`);
     console.log(`║  RTMP Ingest:  rtmp://${localIp}:${RTMP_PORT}/live/<key>${''.padEnd(20 - localIp.length - String(RTMP_PORT).length)}║`);

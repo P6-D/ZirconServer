@@ -54,7 +54,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-sm px-6">
-        <AnimatedCard title="Overlay Inspector" delay={0.1} className="w-full">
+        <AnimatedCard title="Zircon" delay={0.1} className="w-full">
           <div className="mb-6 mt-2 text-center text-sm text-neutral-400">
             Sign in to access the dashboard
           </div>

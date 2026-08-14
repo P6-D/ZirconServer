@@ -26,8 +26,8 @@ COPY server.js ./
 # Copy the built frontend into the backend's public directory
 COPY --from=builder /app/client/out ./public
 
-# Expose the single port
-EXPOSE 3000
+# Expose ports: 3000 (web), 1935 (RTMP), 8000 (HTTP-FLV)
+EXPOSE 3000 1935 8000
 
 # Start the server
 CMD ["node", "server.js"]

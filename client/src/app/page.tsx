@@ -14,9 +14,11 @@ import {
   Layers, 
   Activity, 
   Trash2,
-  Clock
+  Clock,
+  Radio
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Dashboard() {
   const [wsUrl, setWsUrl] = useState<string>("");
@@ -60,6 +62,13 @@ export default function Dashboard() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/livestream"
+            className="flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-all hover:bg-red-500/20 hover:shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+          >
+            <Radio size={12} className="animate-pulse" />
+            Live Streams
+          </Link>
           <StatusBadge 
             status={state.deviceConnected} 
             label={state.deviceConnected ? "Android Online" : "No Device"} 

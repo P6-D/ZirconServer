@@ -6,15 +6,21 @@
  *     1. Android app  (identifies via hello { client: "android" })
  *     2. Browser      (everything else)
  *
+ * • RTMP on :1935  → receives livestreams from Android (RootEncoder)
+ * • HTTP-FLV on :8000 → serves live video to the browser dashboard
+ *
  * Flow:
  *   Android tap/window events → broadcast to all browser clients
  *   Browser command (tap / sequence) → forward to Android
+ *   Android RTMP stream → NMS → HTTP-FLV → browser video player
  */
 
 const express = require('express');
 const { WebSocketServer, OPEN } = require('ws');
 const http = require('http');
 const path = require('path');
+const crypto = require('crypto');
+const NodeMediaServer = require('node-media-server');
 
 const app  = express();
 const httpServer = http.createServer(app);
@@ -30,6 +36,7 @@ const browserClients = new Set();  // all connected browser clients
 const eventLog = [];               // recent events (newest first)
 const MAX_LOG = 300;
 const startTime = Date.now();
+const activeStreams = new Map();    // streamPath → { id, app, name, startedAt, clientIp }
 
 // ── WebSocket connection handler ──────────────────────────────────────────
 wss.on('connection', (ws) => {
@@ -132,8 +139,36 @@ app.get('/status', (_req, res) => res.json({
     uptime: Math.floor((Date.now() - startTime) / 1000),
     androidConnected: androidSocket !== null && androidSocket.readyState === OPEN,
     browserClients: browserClients.size,
-    totalEvents: eventLog.length
+    totalEvents: eventLog.length,
+    activeStreams: activeStreams.size
 }));
+
+/** List all active RTMP streams. */
+app.get('/streams', (req, res) => {
+    const streams = [];
+    for (const [streamPath, info] of activeStreams) {
+        streams.push({
+            ...info,
+            streamPath,
+            flvUrl: `http://${req.hostname}:${MEDIA_HTTP_PORT}${streamPath}.flv`,
+            durationSec: Math.floor((Date.now() - new Date(info.startedAt).getTime()) / 1000)
+        });
+    }
+    res.json(streams);
+});
+
+/** Get info about a single stream. */
+app.get('/streams/:app/:name', (req, res) => {
+    const streamPath = `/${req.params.app}/${req.params.name}`;
+    const info = activeStreams.get(streamPath);
+    if (!info) return res.status(404).json({ error: 'Stream not found' });
+    res.json({
+        ...info,
+        streamPath,
+        flvUrl: `http://${req.hostname}:${MEDIA_HTTP_PORT}${streamPath}.flv`,
+        durationSec: Math.floor((Date.now() - new Date(info.startedAt).getTime()) / 1000)
+    });
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -149,6 +184,71 @@ function shortClass(cls = '') {
     return parts.length > 1 ? parts[parts.length - 1] : cls;
 }
 
+// ── Node Media Server (RTMP + HTTP-FLV) ──────────────────────────────────
+const RTMP_PORT = process.env.RTMP_PORT || 1935;
+const MEDIA_HTTP_PORT = process.env.MEDIA_HTTP_PORT || 8000;
+
+const nmsConfig = {
+    rtmp: {
+        port: RTMP_PORT,
+        chunk_size: 60000,
+        gop_cache: true,
+        ping: 30,
+        ping_timeout: 60
+    },
+    http: {
+        port: MEDIA_HTTP_PORT,
+        allow_origin: '*'
+    }
+};
+
+const nms = new NodeMediaServer(nmsConfig);
+
+// ── NMS Event Hooks ───────────────────────────────────────────────────────
+nms.on('postPublish', (id, StreamPath, args) => {
+    const session = nms.getSession(id);
+    const parts = StreamPath.split('/');
+    const appName = parts[1] || 'live';
+    const streamName = parts[2] || 'unknown';
+
+    const streamInfo = {
+        id,
+        app: appName,
+        name: streamName,
+        startedAt: new Date().toISOString(),
+        clientIp: session?.ip || 'unknown'
+    };
+
+    activeStreams.set(StreamPath, streamInfo);
+    console.log(`[STREAM]  ▶ Started: ${StreamPath} (from ${streamInfo.clientIp})`);
+
+    broadcastToBrowsers({
+        type: 'stream_start',
+        stream: {
+            ...streamInfo,
+            streamPath: StreamPath
+        }
+    });
+});
+
+nms.on('donePublish', (id, StreamPath, args) => {
+    const streamInfo = activeStreams.get(StreamPath);
+    activeStreams.delete(StreamPath);
+    console.log(`[STREAM]  ■ Stopped: ${StreamPath}`);
+
+    broadcastToBrowsers({
+        type: 'stream_stop',
+        streamPath: StreamPath,
+        stream: streamInfo || { id, name: StreamPath.split('/').pop() }
+    });
+});
+
+nms.on('prePublish', (id, StreamPath, args) => {
+    console.log(`[STREAM]  Incoming publish request: ${StreamPath}`);
+});
+
+nms.run();
+
 // ── Start ─────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, '0.0.0.0', () => {
@@ -161,9 +261,11 @@ httpServer.listen(PORT, '0.0.0.0', () => {
             }
         }
     }
-    console.log(`\n╔══════════════════════════════════════════════════╗`);
-    console.log(`║      Overlay Inspector Server                   ║`);
-    console.log(`║  Web console:  http://${localIp}:${PORT}${''.padEnd(22 - localIp.length - String(PORT).length)}║`);
-    console.log(`║  Android URL:  ws://${localIp}:${PORT}${''.padEnd(23 - localIp.length - String(PORT).length)}║`);
-    console.log(`╚══════════════════════════════════════════════════╝\n`);
+    console.log(`\n╔══════════════════════════════════════════════════════════════╗`);
+    console.log(`║           Overlay Inspector Server                          ║`);
+    console.log(`║  Web console:  http://${localIp}:${PORT}${''.padEnd(34 - localIp.length - String(PORT).length)}║`);
+    console.log(`║  Android WS:   ws://${localIp}:${PORT}${''.padEnd(35 - localIp.length - String(PORT).length)}║`);
+    console.log(`║  RTMP Ingest:  rtmp://${localIp}:${RTMP_PORT}/live/<key>${''.padEnd(20 - localIp.length - String(RTMP_PORT).length)}║`);
+    console.log(`║  HTTP-FLV:     http://${localIp}:${MEDIA_HTTP_PORT}/live/<key>.flv${''.padEnd(12 - localIp.length - String(MEDIA_HTTP_PORT).length)}║`);
+    console.log(`╚══════════════════════════════════════════════════════════════╝\n`);
 });

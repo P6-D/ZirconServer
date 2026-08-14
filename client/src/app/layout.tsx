@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Overlay Inspector",
-  description: "Advanced Android Overlay Inspector Dashboard",
+  title: "Overlay Inspector — Live Dashboard",
+  description: "Advanced Android Overlay Inspector with RTMP Livestream Dashboard",
 };
 
 export default function RootLayout({

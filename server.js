@@ -21,10 +21,16 @@ const http = require('http');
 const path = require('path');
 const crypto = require('crypto');
 const NodeMediaServer = require('node-media-server');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const app  = express();
+const app = express();
 const httpServer = http.createServer(app);
-const wss  = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server: httpServer });
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-123';
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD_HASH = '$2b$10$AqWqqAD/RJhDUeat8B1a3.eC8zV93x/kn6Q8WWkb3vqDhRwydc6k2'; // 
 
 // ── Static files + JSON body parser ─────────────────────────────────────
 app.use(express.json());
@@ -120,6 +126,22 @@ wss.on('connection', (ws) => {
 });
 
 // ── REST endpoints ────────────────────────────────────────────────────────
+
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+
+    if (username !== ADMIN_USERNAME) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isValid = bcrypt.compareSync(password, ADMIN_PASSWORD_HASH);
+    if (!isValid) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token });
+});
 
 /** Send a command to Android via HTTP (alternative to WebSocket from browser). */
 app.post('/command', (req, res) => {

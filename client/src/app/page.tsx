@@ -175,14 +175,14 @@ export default function Dashboard() {
               {overlayState.lastTap ? `(${overlayState.lastTap.x}, ${overlayState.lastTap.y})` : "—"}
             </div>
           </AnimatedCard>
-          
+
           {/* Stream Info Cards & Selector */}
           {streamsWithUrls.length > 0 && (
             <AnimatedCard title="Active Streams" delay={0.4}>
               <div className="flex flex-col gap-3">
                 {streamsWithUrls.map((stream) => (
-                  <button 
-                    key={stream.streamPath} 
+                  <button
+                    key={stream.streamPath}
                     onClick={() => setSelectedStreamPath(stream.streamPath)}
                     className={`text-left w-full transition-all ${activeStream?.streamPath === stream.streamPath ? 'ring-2 ring-red-500/50 rounded-lg' : 'opacity-60 hover:opacity-100'}`}
                   >
@@ -195,10 +195,10 @@ export default function Dashboard() {
         </aside>
 
         {/* Center - Stream & Event Feed */}
-        <section className="flex flex-1 flex-col gap-4 overflow-hidden min-w-[500px]">
+        <section className="flex flex-1 flex-col overflow-hidden min-w-[500px] relative rounded-xl border border-white/10 bg-black/40 shadow-2xl">
           
-          {/* Top Half: Video Player or Waiting State */}
-          <div className={`flex-none rounded-xl border border-white/10 bg-black/40 overflow-hidden relative shadow-2xl transition-all duration-300 ${isLogsOpen ? 'max-h-[55%]' : 'flex-1 max-h-full'}`}>
+          {/* Full-Height Video Player or Waiting State */}
+          <div className="absolute inset-0 z-0 flex flex-col">
             {activeStream ? (
               <StreamPlayer
                 streamUrl={activeStream.flvUrl}
@@ -229,17 +229,17 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Bottom Half: Touch Logs */}
-          <div className={`flex flex-col rounded-xl border border-white/10 bg-black/20 backdrop-blur-md transition-all duration-300 ${isLogsOpen ? 'flex-1' : 'flex-none'}`}>
-            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 bg-white/5">
-              <div className="flex items-center gap-3">
-                <button 
+          {/* Bottom Half: Sticky Touch Logs Drawer */}
+          <div className={`absolute bottom-0 left-0 right-0 z-10 flex flex-col border-t border-white/10 bg-black/70 backdrop-blur-2xl transition-all duration-300 ease-in-out ${isLogsOpen ? 'h-[45%]' : 'h-[52px]'}`}>
+            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 h-[52px] bg-white/5 shadow-md">
+              <div className="flex items-center gap-3 h-full">
+                <button
                   onClick={() => setIsLogsOpen(!isLogsOpen)}
                   className="flex items-center justify-center rounded-md p-1.5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
                 >
                   {isLogsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                 </button>
-                
+
                 {isLogsOpen && (
                   <Tabs
                     activeTab={filter}
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 )}
                 {!isLogsOpen && <span className="text-sm font-medium">Touch Logs</span>}
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <span className="text-xs text-neutral-500">{overlayState.events.length} events</span>
                 <button
@@ -267,16 +267,15 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {isLogsOpen && (
-              <div className="flex-1 overflow-hidden p-4">
-                <EventFeed events={overlayState.events} filter={filter} />
-              </div>
-            )}
+            {/* The actual feed content, visible when open */}
+            <div className={`flex-1 overflow-hidden p-4 transition-opacity duration-300 ${isLogsOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
+              <EventFeed events={overlayState.events} filter={filter} />
+            </div>
           </div>
         </section>
 
         {/* Right Sidebar - Commands */}
-        <aside className="w-80 shrink-0 overflow-hidden">
+        <aside className="w-80 shrink-0 overflow-y-auto pr-2 custom-scrollbar">
           <CommandPane
             onQuickTap={sendTap}
             onRunSequence={sendSequence}

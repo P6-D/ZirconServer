@@ -189,10 +189,10 @@ export function StreamPlayer({
   return (
     <div
       ref={containerRef}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]"
+      className="group relative flex flex-col h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]"
     >
       {/* Video Area */}
-      <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
+      <div className="relative flex-1 h-full w-full overflow-hidden bg-neutral-950">
         {/* Live Badge */}
         {isLive && status === "playing" && (
           <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-red-500/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-sm">

@@ -37,7 +37,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── State ────────────────────────────────────────────────────────────────
-let androidSocket = null;          // the one connected Android client
+const androidSockets = new Map();  // deviceId -> WebSocket
 const browserClients = new Set();  // all connected browser clients
 const eventLog = [];               // recent events (newest first)
 const MAX_LOG = 300;
@@ -57,16 +57,23 @@ wss.on('connection', (ws) => {
         if (msg.type === 'hello') {
             if (msg.client === 'android') {
                 ws._clientType = 'android';
-                androidSocket = ws;
-                console.log('\n[DEVICE] Android device connected');
-                broadcastToBrowsers({ type: 'device_status', connected: true });
+                ws.deviceId = msg.deviceId || `device_${Date.now()}`;
+                ws.deviceMeta = {
+                    id: ws.deviceId,
+                    manufacturer: msg.manufacturer || 'Unknown',
+                    model: msg.model || 'Device',
+                    version: msg.version || '?'
+                };
+                androidSockets.set(ws.deviceId, ws);
+                console.log(`\n[DEVICE] Android device connected: ${ws.deviceId} (${ws.deviceMeta.manufacturer} ${ws.deviceMeta.model})`);
+                broadcastToBrowsers({ type: 'device_list', devices: Array.from(androidSockets.values()).map(s => s.deviceMeta) });
             } else {
                 ws._clientType = 'browser';
                 browserClients.add(ws);
                 // Send current state to the newly connected browser
                 ws.send(JSON.stringify({
                     type: 'init',
-                    deviceConnected: androidSocket !== null && androidSocket.readyState === OPEN,
+                    devices: Array.from(androidSockets.values()).map(s => s.deviceMeta),
                     uptime: Math.floor((Date.now() - startTime) / 1000),
                     log: eventLog.slice(0, 100)
                 }));
@@ -76,7 +83,7 @@ wss.on('connection', (ws) => {
 
         // ── Android → Server ─────────────────────────────────────────────
         if (ws._clientType === 'android') {
-            const entry = { ...msg, _receivedAt: new Date().toISOString() };
+            const entry = { ...msg, _receivedAt: new Date().toISOString(), deviceId: ws.deviceId };
 
             // Prepend to log (newest first), trim to MAX_LOG
             eventLog.unshift(entry);
@@ -99,12 +106,13 @@ wss.on('connection', (ws) => {
 
         // ── Browser → Server (command for Android) ───────────────────────
         if (ws._clientType === 'browser' && msg.type === 'command') {
-            if (!androidSocket || androidSocket.readyState !== OPEN) {
-                ws.send(JSON.stringify({ type: 'error', message: 'Android not connected' }));
+            const targetSocket = androidSockets.get(msg.targetDeviceId);
+            if (!targetSocket || targetSocket.readyState !== 1) { // 1 = OPEN
+                ws.send(JSON.stringify({ type: 'error', message: 'Target Android device not connected' }));
                 return;
             }
-            androidSocket.send(JSON.stringify(msg));
-            console.log(`[CMD]    Sent to Android:`, JSON.stringify(msg.action === 'sequence'
+            targetSocket.send(JSON.stringify(msg));
+            console.log(`[CMD]    Sent to ${msg.targetDeviceId}:`, JSON.stringify(msg.action === 'sequence'
                 ? { action: msg.action, steps: msg.steps?.length + ' steps' }
                 : msg));
         }
@@ -112,9 +120,11 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         if (ws._clientType === 'android') {
-            androidSocket = null;
-            console.log('[DEVICE] Android device disconnected');
-            broadcastToBrowsers({ type: 'device_status', connected: false });
+            if (ws.deviceId) {
+                androidSockets.delete(ws.deviceId);
+                console.log(`[DEVICE] Android device disconnected: ${ws.deviceId}`);
+                broadcastToBrowsers({ type: 'device_list', devices: Array.from(androidSockets.values()).map(s => s.deviceMeta) });
+            }
         } else {
             browserClients.delete(ws);
         }

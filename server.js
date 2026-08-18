@@ -228,17 +228,17 @@ const nmsConfig = {
 const nms = new NodeMediaServer(nmsConfig);
 
 // ── NMS Event Hooks ───────────────────────────────────────────────────────
-nms.on('prePublish', (id, StreamPath, args) => {
-    const parts = StreamPath.split('/');
-    const appName = parts[1] || 'live';
-    const streamName = parts[2] || 'unknown';
+nms.on('prePublish', (session) => {
+    const StreamPath = session.streamPath;
+    const appName = session.streamApp || 'live';
+    const streamName = session.streamName || 'unknown';
 
     const streamInfo = {
-        id,
+        id: session.id,
         app: appName,
         name: streamName,
         startedAt: new Date().toISOString(),
-        clientIp: 'unknown'
+        clientIp: session.ip || 'unknown'
     };
 
     activeStreams.set(StreamPath, streamInfo);
@@ -253,11 +253,12 @@ nms.on('prePublish', (id, StreamPath, args) => {
     });
 });
 
-nms.on('postPublish', (id, StreamPath, args) => {
-    console.log(`[STREAM]  ▶ postPublish triggered for: ${StreamPath}`);
+nms.on('postPublish', (session) => {
+    console.log(`[STREAM]  ▶ postPublish triggered for: ${session.streamPath}`);
 });
 
-nms.on('donePublish', (id, StreamPath, args) => {
+nms.on('donePublish', (session) => {
+    const StreamPath = session.streamPath;
     const streamInfo = activeStreams.get(StreamPath);
     activeStreams.delete(StreamPath);
     console.log(`[STREAM]  ■ Stopped: ${StreamPath}`);
@@ -265,7 +266,7 @@ nms.on('donePublish', (id, StreamPath, args) => {
     broadcastToBrowsers({
         type: 'stream_stop',
         streamPath: StreamPath,
-        stream: streamInfo || { id, name: StreamPath.split('/').pop() }
+        stream: streamInfo || { id: session.id, name: session.streamName || 'unknown' }
     });
 });
 

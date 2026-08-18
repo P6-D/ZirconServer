@@ -211,12 +211,13 @@ const RTMP_PORT = process.env.RTMP_PORT || 1935;
 const MEDIA_HTTP_PORT = process.env.MEDIA_HTTP_PORT || 8000;
 
 const nmsConfig = {
+    logType: 3,
     rtmp: {
         port: RTMP_PORT,
-        chunk_size: 60000,
-        gop_cache: true,
+        chunk_size: 4096,
         ping: 30,
-        ping_timeout: 60
+        ping_timeout: 60,
+        gop_cache: false
     },
     http: {
         port: MEDIA_HTTP_PORT,
@@ -290,4 +291,12 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`║  RTMP Ingest:  rtmp://${localIp}:${RTMP_PORT}/live/<key>${''.padEnd(20 - localIp.length - String(RTMP_PORT).length)}║`);
     console.log(`║  HTTP-FLV:     http://${localIp}:${MEDIA_HTTP_PORT}/live/<key>.flv${''.padEnd(12 - localIp.length - String(MEDIA_HTTP_PORT).length)}║`);
     console.log(`╚══════════════════════════════════════════════════════════════╝\n`);
+});
+
+// ── Global Error Handling ──────────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });

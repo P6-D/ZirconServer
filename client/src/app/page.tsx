@@ -22,7 +22,9 @@ import {
   Copy,
   Check,
   Tv2,
-  Zap
+  Zap,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 
@@ -43,6 +45,8 @@ export default function Dashboard() {
   const { streams, wsConnected: streamWsConnected } = useStreamServer(wsUrl);
 
   const [filter, setFilter] = useState<"all" | "tap" | "window" | "sms" | "clipboard">("all");
+  const [isLogsOpen, setIsLogsOpen] = useState(true);
+  const [selectedStreamPath, setSelectedStreamPath] = useState<string | null>(null);
 
   const streamsWithUrls = useMemo(() => {
     return streams.map((s) => ({
@@ -51,7 +55,19 @@ export default function Dashboard() {
     }));
   }, [streams, mediaHost]);
 
-  const activeStream = streamsWithUrls[0]; // Display the first stream in the center console
+  // Determine active stream: either the user-selected one, or the first available
+  const activeStream = useMemo(() => {
+    if (streamsWithUrls.length === 0) return null;
+    const selected = streamsWithUrls.find(s => s.streamPath === selectedStreamPath);
+    return selected || streamsWithUrls[0];
+  }, [streamsWithUrls, selectedStreamPath]);
+
+  // Auto-select a stream if none is selected but streams exist
+  useEffect(() => {
+    if (streamsWithUrls.length > 0 && !selectedStreamPath) {
+      setSelectedStreamPath(streamsWithUrls[0].streamPath);
+    }
+  }, [streamsWithUrls, selectedStreamPath]);
 
   const formatUptime = (sec: number) => {
     const h = Math.floor(sec / 3600);
@@ -160,12 +176,18 @@ export default function Dashboard() {
             </div>
           </AnimatedCard>
           
-          {/* Stream Info Cards */}
+          {/* Stream Info Cards & Selector */}
           {streamsWithUrls.length > 0 && (
-            <AnimatedCard title="Stream Info" delay={0.4}>
+            <AnimatedCard title="Active Streams" delay={0.4}>
               <div className="flex flex-col gap-3">
-                {streamsWithUrls.map((stream, idx) => (
-                  <StreamInfoCard key={stream.streamPath} stream={stream} />
+                {streamsWithUrls.map((stream) => (
+                  <button 
+                    key={stream.streamPath} 
+                    onClick={() => setSelectedStreamPath(stream.streamPath)}
+                    className={`text-left w-full transition-all ${activeStream?.streamPath === stream.streamPath ? 'ring-2 ring-red-500/50 rounded-lg' : 'opacity-60 hover:opacity-100'}`}
+                  >
+                    <StreamInfoCard stream={stream} />
+                  </button>
                 ))}
               </div>
             </AnimatedCard>
@@ -176,7 +198,7 @@ export default function Dashboard() {
         <section className="flex flex-1 flex-col gap-4 overflow-hidden min-w-[500px]">
           
           {/* Top Half: Video Player or Waiting State */}
-          <div className="flex-none max-h-[55%] rounded-xl border border-white/10 bg-black/40 overflow-hidden relative shadow-2xl">
+          <div className={`flex-none rounded-xl border border-white/10 bg-black/40 overflow-hidden relative shadow-2xl transition-all duration-300 ${isLogsOpen ? 'max-h-[55%]' : 'flex-1 max-h-full'}`}>
             {activeStream ? (
               <StreamPlayer
                 streamUrl={activeStream.flvUrl}
@@ -208,33 +230,48 @@ export default function Dashboard() {
           </div>
 
           {/* Bottom Half: Touch Logs */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
+          <div className={`flex flex-col rounded-xl border border-white/10 bg-black/20 backdrop-blur-md transition-all duration-300 ${isLogsOpen ? 'flex-1' : 'flex-none'}`}>
             <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 bg-white/5">
-              <Tabs
-                activeTab={filter}
-                onChange={(id) => setFilter(id as any)}
-                tabs={[
-                  { id: "all", label: "All Events" },
-                  { id: "tap", label: "Taps" },
-                  { id: "window", label: "Windows" },
-                  { id: "sms", label: "SMS" },
-                  { id: "clipboard", label: "Clipboard" }
-                ]}
-              />
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsLogsOpen(!isLogsOpen)}
+                  className="flex items-center justify-center rounded-md p-1.5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                >
+                  {isLogsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                </button>
+                
+                {isLogsOpen && (
+                  <Tabs
+                    activeTab={filter}
+                    onChange={(id) => setFilter(id as any)}
+                    tabs={[
+                      { id: "all", label: "All Events" },
+                      { id: "tap", label: "Taps" },
+                      { id: "window", label: "Windows" },
+                      { id: "sms", label: "SMS" },
+                      { id: "clipboard", label: "Clipboard" }
+                    ]}
+                  />
+                )}
+                {!isLogsOpen && <span className="text-sm font-medium">Touch Logs</span>}
+              </div>
+              
               <div className="flex items-center gap-4">
                 <span className="text-xs text-neutral-500">{overlayState.events.length} events</span>
                 <button
                   onClick={clearEvents}
                   className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
                 >
-                  <Trash2 size={12} /> Clear Feed
+                  <Trash2 size={12} /> Clear
                 </button>
               </div>
             </div>
             
-            <div className="flex-1 overflow-hidden p-4">
-              <EventFeed events={overlayState.events} filter={filter} />
-            </div>
+            {isLogsOpen && (
+              <div className="flex-1 overflow-hidden p-4">
+                <EventFeed events={overlayState.events} filter={filter} />
+              </div>
+            )}
           </div>
         </section>
 

@@ -107,8 +107,8 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-3">
           <StatusBadge
-            status={overlayState.deviceConnected}
-            label={overlayState.deviceConnected ? "Android Online" : "No Device"}
+            status={overlayState.devices.length > 0}
+            label={overlayState.devices.length > 0 ? `${overlayState.devices.length} Device${overlayState.devices.length > 1 ? 's' : ''}` : "No Device"}
             icon={<Smartphone size={14} />}
           />
           <StatusBadge
@@ -277,8 +277,14 @@ export default function Dashboard() {
         {/* Right Sidebar - Commands */}
         <aside className="w-80 shrink-0 overflow-y-auto pr-2 custom-scrollbar">
           <CommandPane
-            onQuickTap={sendTap}
-            onRunSequence={sendSequence}
+            onQuickTap={(x, y) => {
+              const target = activeStream?.streamPath || overlayState.devices[0]?.id;
+              if (target) sendTap(target, x, y);
+            }}
+            onRunSequence={(steps) => {
+              const target = activeStream?.streamPath || overlayState.devices[0]?.id;
+              if (target) sendSequence(target, steps);
+            }}
           />
         </aside>
 

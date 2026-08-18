@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 export type OverlayEvent = {
   type: "tap_event" | "window_event" | "sms" | "clipboard";
+  deviceId?: string;
   x?: number;
   y?: number;
   package?: string;
@@ -22,7 +23,7 @@ export type SequenceStep = {
 
 type ServerState = {
   wsConnected: boolean;
-  deviceConnected: boolean;
+  devices: { id: string; manufacturer: string; model: string; version: string }[];
   uptime: number;
   events: OverlayEvent[];
   stats: {
@@ -41,7 +42,7 @@ type ServerState = {
 export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
   const [state, setState] = useState<ServerState>({
     wsConnected: false,
-    deviceConnected: false,
+    devices: [],
     uptime: 0,
     events: [],
     stats: { taps: 0, windows: 0, sms: 0, clipboard: 0 },
@@ -134,7 +135,7 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
 
           return {
             ...prev,
-            deviceConnected: !!msg.deviceConnected,
+            devices: msg.devices || [],
             uptime: msg.uptime || 0,
             events: log,
             stats: { taps, windows, sms, clipboard },
@@ -144,8 +145,8 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
         });
         break;
 
-      case "device_status":
-        setState((prev) => ({ ...prev, deviceConnected: !!msg.connected }));
+      case "device_list":
+        setState((prev) => ({ ...prev, devices: msg.devices || [] }));
         break;
 
       case "event":
@@ -198,12 +199,12 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
     }
   };
 
-  const sendTap = (x: number, y: number) => {
-    sendCommand({ action: "tap", x, y });
+  const sendTap = (targetDeviceId: string, x: number, y: number) => {
+    sendCommand({ action: "tap", targetDeviceId, x, y });
   };
 
-  const sendSequence = (steps: SequenceStep[]) => {
-    sendCommand({ action: "sequence", steps });
+  const sendSequence = (targetDeviceId: string, steps: SequenceStep[]) => {
+    sendCommand({ action: "sequence", targetDeviceId, steps });
   };
 
   const clearEvents = () => {

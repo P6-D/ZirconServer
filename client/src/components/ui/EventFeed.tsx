@@ -65,7 +65,14 @@ const EventRow = ({ event }: { event: OverlayEvent }) => {
       transition={{ duration: 0.2 }}
       className="group mb-2 flex items-center gap-4 rounded-xl border border-transparent p-3 transition-colors hover:border-white/5 hover:bg-white/5"
     >
-      <div className="text-xs text-neutral-500">{time}</div>
+      <div className="flex flex-col gap-0.5">
+        <div className="text-xs text-neutral-500">{time}</div>
+        {event.deviceId && (
+          <div className="text-[9px] font-mono text-neutral-600 truncate max-w-[80px] uppercase">
+            {event.deviceId.replace('device_', '')}
+          </div>
+        )}
+      </div>
       <div
         className={cn(
           "flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-widest",

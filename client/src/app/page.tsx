@@ -1,6 +1,6 @@
 "use client";
 
-import { useOverlayServer } from "@/hooks/useOverlayServer";
+import { useOverlayServer, SequenceStep } from "@/hooks/useOverlayServer";
 import { useStreamServer, type StreamInfo } from "@/hooks/useStreamServer";
 import { StreamPlayer } from "@/components/ui/StreamPlayer";
 import { AnimatedCard } from "@/components/ui/AnimatedCard";
@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [filter, setFilter] = useState<"all" | "tap" | "window" | "sms" | "clipboard">("all");
   const [isLogsOpen, setIsLogsOpen] = useState(true);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [sequence, setSequence] = useState<SequenceStep[]>([]);
 
   const streamsWithUrls = useMemo(() => {
     return streams.map((s) => ({
@@ -276,7 +277,16 @@ export default function Dashboard() {
             
             {/* The actual feed content, visible when open */}
             <div className={`flex-1 overflow-hidden p-4 transition-opacity duration-300 ${isLogsOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
-              <EventFeed events={overlayState.events} filter={filter} />
+              <EventFeed 
+                events={overlayState.events} 
+                filter={filter} 
+                onQuickTap={(x, y) => {
+                  if (selectedDeviceId) sendTap(selectedDeviceId, x, y);
+                }}
+                onAddSequenceStep={(x, y) => {
+                  setSequence(prev => [...prev, { action: "tap", x, y, delay: 500 }]);
+                }}
+              />
             </div>
           </div>
         </section>
@@ -290,6 +300,8 @@ export default function Dashboard() {
             onRunSequence={(steps) => {
               if (selectedDeviceId) sendSequence(selectedDeviceId, steps);
             }}
+            sequence={sequence}
+            setSequence={setSequence}
           />
         </aside>
 

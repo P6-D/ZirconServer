@@ -105,16 +105,24 @@ wss.on('connection', (ws) => {
         }
 
         // ── Browser → Server (command for Android) ───────────────────────
-        if (ws._clientType === 'browser' && msg.type === 'command') {
-            const targetSocket = androidSockets.get(msg.targetDeviceId);
-            if (!targetSocket || targetSocket.readyState !== 1) { // 1 = OPEN
-                ws.send(JSON.stringify({ type: 'error', message: 'Target Android device not connected' }));
+        if (ws._clientType === 'browser') {
+            if (msg.type === 'clear_logs') {
+                eventLog.length = 0; // Empty the array
+                console.log('[LOGS] Cleared by browser');
                 return;
             }
-            targetSocket.send(JSON.stringify(msg));
-            console.log(`[CMD]    Sent to ${msg.targetDeviceId}:`, JSON.stringify(msg.action === 'sequence'
-                ? { action: msg.action, steps: msg.steps?.length + ' steps' }
-                : msg));
+
+            if (msg.type === 'command') {
+                const targetSocket = androidSockets.get(msg.targetDeviceId);
+                if (!targetSocket || targetSocket.readyState !== 1) { // 1 = OPEN
+                    ws.send(JSON.stringify({ type: 'error', message: 'Target Android device not connected' }));
+                    return;
+                }
+                targetSocket.send(JSON.stringify(msg));
+                console.log(`[CMD]    Sent to ${msg.targetDeviceId}:`, JSON.stringify(msg.action === 'sequence'
+                    ? { action: msg.action, steps: msg.steps?.length + ' steps' }
+                    : msg));
+            }
         }
     });
 
@@ -169,7 +177,7 @@ app.get('/events', (_req, res) => res.json(eventLog));
 /** Server health / status. */
 app.get('/status', (_req, res) => res.json({
     uptime: Math.floor((Date.now() - startTime) / 1000),
-    androidConnected: androidSocket !== null && androidSocket.readyState === OPEN,
+    androidConnected: androidSockets.size > 0,
     browserClients: browserClients.size,
     totalEvents: eventLog.length,
     activeStreams: activeStreams.size

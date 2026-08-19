@@ -109,7 +109,7 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
     switch (msg.type) {
       case "init":
         setState((prev) => {
-          const log = msg.log || [];
+          const log = (msg.log || []).reverse(); // Newest at the end
           const taps = log.filter((e: any) => e.type === "tap_event").length;
           const windows = log.filter((e: any) => e.type === "window_event").length;
           const sms = log.filter((e: any) => e.type === "sms").length;
@@ -166,7 +166,7 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
       const isSms = e.type === "sms";
       const isClip = e.type === "clipboard";
 
-      const newEvents = [e, ...prev.events].slice(0, 500);
+      const newEvents = [...prev.events, e].slice(-500);
       
       return {
         ...prev,
@@ -208,6 +208,9 @@ export function useOverlayServer(wsUrl: string = "ws://localhost:3000") {
   };
 
   const clearEvents = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "clear_logs" }));
+    }
     setState((prev) => ({
       ...prev,
       events: [],

@@ -9,9 +9,13 @@ import { cn } from "@/lib/utils";
 export const CommandPane = ({
   onQuickTap,
   onRunSequence,
+  sequence,
+  setSequence,
 }: {
   onQuickTap: (x: number, y: number) => void;
   onRunSequence: (steps: SequenceStep[]) => void;
+  sequence: SequenceStep[];
+  setSequence: (s: SequenceStep[]) => void;
 }) => {
   const [qtX, setQtX] = useState("");
   const [qtY, setQtY] = useState("");
@@ -19,7 +23,6 @@ export const CommandPane = ({
   const [sqX, setSqX] = useState("");
   const [sqY, setSqY] = useState("");
   const [sqDelay, setSqDelay] = useState("500");
-  const [sequence, setSequence] = useState<SequenceStep[]>([]);
 
   const [presets, setPresets] = useState<{ name: string; steps: SequenceStep[] }[]>([]);
 

@@ -106,6 +106,28 @@ export default function Dashboard() {
 
         <div className="flex-1" />
 
+        {/* Device Dropdown */}
+        <div className="flex items-center gap-2 mr-4">
+          <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold hidden sm:block">Target Device</label>
+          <div className="relative">
+            <select
+              value={selectedDeviceId || ""}
+              onChange={(e) => setSelectedDeviceId(e.target.value)}
+              className="appearance-none bg-white/5 border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 hover:bg-white/10 transition-colors cursor-pointer min-w-[200px] truncate"
+            >
+              {overlayState.devices.length === 0 && (
+                <option value="" disabled className="bg-neutral-900">No devices connected</option>
+              )}
+              {overlayState.devices.map(d => (
+                <option key={d.id} value={d.id} className="bg-neutral-900 text-white">
+                  {d.manufacturer} {d.model} ({d.id.replace('device_', '')})
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <StatusBadge
             status={overlayState.devices.length > 0}
@@ -177,26 +199,6 @@ export default function Dashboard() {
             </div>
           </AnimatedCard>
 
-          {/* Device Selector */}
-          {overlayState.devices.length > 0 && (
-            <AnimatedCard title="Connected Devices" delay={0.4}>
-              <div className="flex flex-col gap-3">
-                {overlayState.devices.map((device) => {
-                  const hasStream = streamsWithUrls.some(s => s.streamPath === `/live/${device.id}`);
-                  const isSelected = selectedDeviceId === device.id;
-                  return (
-                    <button
-                      key={device.id}
-                      onClick={() => setSelectedDeviceId(device.id)}
-                      className={`text-left w-full transition-all ${isSelected ? 'ring-2 ring-blue-500/50 rounded-lg' : 'opacity-60 hover:opacity-100'}`}
-                    >
-                      <DeviceInfoCard device={device} isStreaming={hasStream} isSelected={isSelected} />
-                    </button>
-                  );
-                })}
-              </div>
-            </AnimatedCard>
-          )}
         </aside>
 
         {/* Center - Stream & Event Feed */}
@@ -319,23 +321,4 @@ const StatRow = ({ label, value, color }: { label: string; value: number | strin
   </div>
 );
 
-function DeviceInfoCard({ device, isStreaming, isSelected }: { device: any, isStreaming: boolean, isSelected: boolean }) {
-  return (
-    <div className={`rounded-lg border p-3 ${isStreaming ? 'border-red-500/20 bg-red-500/5' : 'border-white/10 bg-white/5'}`}>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isStreaming ? (
-            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" title="Streaming" />
-          ) : (
-            <div className="h-1.5 w-1.5 rounded-full bg-green-500" title="Connected" />
-          )}
-          <span className="text-sm font-medium text-white">{device.manufacturer} {device.model}</span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1 text-[11px] text-neutral-500">
-        <span>Android {device.version}</span>
-        <span className="font-mono text-[10px] text-neutral-600 truncate">{device.id.replace('device_', '')}</span>
-      </div>
-    </div>
-  );
-}
+

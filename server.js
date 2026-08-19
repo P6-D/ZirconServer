@@ -155,12 +155,12 @@ app.post('/api/login', (req, res) => {
 
 /** Send a command to Android via HTTP (alternative to WebSocket from browser). */
 app.post('/command', (req, res) => {
-    if (!androidSocket || androidSocket.readyState !== OPEN) {
-        return res.status(503).json({ error: 'Android not connected' });
+    const targetSocket = androidSockets.get(req.body.targetDeviceId);
+    if (!targetSocket || targetSocket.readyState !== 1) {
+        return res.status(503).json({ error: 'Target Android device not connected' });
     }
-    androidSocket.send(JSON.stringify({ type: 'command', ...req.body }));
-    console.log(`[HTTP CMD] Sent:`, req.body);
-    res.json({ ok: true });
+    targetSocket.send(JSON.stringify({ type: 'command', ...req.body }));
+    res.json({ success: true });
 });
 
 /** Return the event log as JSON. */

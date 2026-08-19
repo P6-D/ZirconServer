@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   const [filter, setFilter] = useState<"all" | "tap" | "window" | "sms" | "clipboard">("all");
   const [isLogsOpen, setIsLogsOpen] = useState(true);
-  const [selectedStreamPath, setSelectedStreamPath] = useState<string | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   const streamsWithUrls = useMemo(() => {
     return streams.map((s) => ({
@@ -55,19 +55,20 @@ export default function Dashboard() {
     }));
   }, [streams, mediaHost]);
 
-  // Determine active stream: either the user-selected one, or the first available
+  // Determine active stream based on selected device ID
   const activeStream = useMemo(() => {
-    if (streamsWithUrls.length === 0) return null;
-    const selected = streamsWithUrls.find(s => s.streamPath === selectedStreamPath);
-    return selected || streamsWithUrls[0];
-  }, [streamsWithUrls, selectedStreamPath]);
+    if (!selectedDeviceId) return null;
+    return streamsWithUrls.find(s => s.streamPath === `/live/${selectedDeviceId}`);
+  }, [streamsWithUrls, selectedDeviceId]);
 
-  // Auto-select a stream if none is selected but streams exist
+  // Auto-select a device if none is selected but devices exist
   useEffect(() => {
-    if (streamsWithUrls.length > 0 && !selectedStreamPath) {
-      setSelectedStreamPath(streamsWithUrls[0].streamPath);
+    if (overlayState.devices.length > 0 && !selectedDeviceId) {
+      setSelectedDeviceId(overlayState.devices[0].id);
+    } else if (overlayState.devices.length === 0 && selectedDeviceId) {
+      setSelectedDeviceId(null);
     }
-  }, [streamsWithUrls, selectedStreamPath]);
+  }, [overlayState.devices, selectedDeviceId]);
 
   const formatUptime = (sec: number) => {
     const h = Math.floor(sec / 3600);
@@ -176,19 +177,23 @@ export default function Dashboard() {
             </div>
           </AnimatedCard>
 
-          {/* Stream Info Cards & Selector */}
-          {streamsWithUrls.length > 0 && (
-            <AnimatedCard title="Active Streams" delay={0.4}>
+          {/* Device Selector */}
+          {overlayState.devices.length > 0 && (
+            <AnimatedCard title="Connected Devices" delay={0.4}>
               <div className="flex flex-col gap-3">
-                {streamsWithUrls.map((stream) => (
-                  <button
-                    key={stream.streamPath}
-                    onClick={() => setSelectedStreamPath(stream.streamPath)}
-                    className={`text-left w-full transition-all ${activeStream?.streamPath === stream.streamPath ? 'ring-2 ring-red-500/50 rounded-lg' : 'opacity-60 hover:opacity-100'}`}
-                  >
-                    <StreamInfoCard stream={stream} />
-                  </button>
-                ))}
+                {overlayState.devices.map((device) => {
+                  const hasStream = streamsWithUrls.some(s => s.streamPath === `/live/${device.id}`);
+                  const isSelected = selectedDeviceId === device.id;
+                  return (
+                    <button
+                      key={device.id}
+                      onClick={() => setSelectedDeviceId(device.id)}
+                      className={`text-left w-full transition-all ${isSelected ? 'ring-2 ring-blue-500/50 rounded-lg' : 'opacity-60 hover:opacity-100'}`}
+                    >
+                      <DeviceInfoCard device={device} isStreaming={hasStream} isSelected={isSelected} />
+                    </button>
+                  );
+                })}
               </div>
             </AnimatedCard>
           )}
@@ -278,12 +283,10 @@ export default function Dashboard() {
         <aside className="w-80 shrink-0 overflow-y-auto pr-2 custom-scrollbar">
           <CommandPane
             onQuickTap={(x, y) => {
-              const target = activeStream?.streamPath || overlayState.devices[0]?.id;
-              if (target) sendTap(target, x, y);
+              if (selectedDeviceId) sendTap(selectedDeviceId, x, y);
             }}
             onRunSequence={(steps) => {
-              const target = activeStream?.streamPath || overlayState.devices[0]?.id;
-              if (target) sendSequence(target, steps);
+              if (selectedDeviceId) sendSequence(selectedDeviceId, steps);
             }}
           />
         </aside>
@@ -316,35 +319,22 @@ const StatRow = ({ label, value, color }: { label: string; value: number | strin
   </div>
 );
 
-function StreamInfoCard({ stream }: { stream: StreamInfo & { flvUrl: string } }) {
-  const [elapsed, setElapsed] = useState("");
-
-  useEffect(() => {
-    if (!stream.startedAt) return;
-    const tick = () => {
-      const diff = Math.floor((Date.now() - new Date(stream.startedAt).getTime()) / 1000);
-      const h = Math.floor(diff / 3600);
-      const m = Math.floor((diff % 3600) / 60);
-      const s = diff % 60;
-      setElapsed(`${h > 0 ? h + ":" : ""}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    };
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [stream.startedAt]);
-
+function DeviceInfoCard({ device, isStreaming, isSelected }: { device: any, isStreaming: boolean, isSelected: boolean }) {
   return (
-    <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+    <div className={`rounded-lg border p-3 ${isStreaming ? 'border-red-500/20 bg-red-500/5' : 'border-white/10 bg-white/5'}`}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-sm font-medium text-white">{stream.name}</span>
+          {isStreaming ? (
+            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" title="Streaming" />
+          ) : (
+            <div className="h-1.5 w-1.5 rounded-full bg-green-500" title="Connected" />
+          )}
+          <span className="text-sm font-medium text-white">{device.manufacturer} {device.model}</span>
         </div>
-        <span className="text-[11px] font-mono text-red-400/80">{elapsed}</span>
       </div>
       <div className="flex flex-col gap-1 text-[11px] text-neutral-500">
-        <span>Source: {stream.clientIp}</span>
-        <span className="font-mono text-[10px] text-neutral-600 truncate">{stream.streamPath}</span>
+        <span>Android {device.version}</span>
+        <span className="font-mono text-[10px] text-neutral-600 truncate">{device.id.replace('device_', '')}</span>
       </div>
     </div>
   );

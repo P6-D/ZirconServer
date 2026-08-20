@@ -19,6 +19,10 @@ type StreamPlayerProps = {
   startedAt?: string;
   clientIp?: string;
   onFullscreen?: () => void;
+  onVideoClick?: (x: number, y: number) => void;
+  remoteTaps?: { x: number; y: number; ts: number }[];
+  deviceWidth?: number;
+  deviceHeight?: number;
 };
 
 export function StreamPlayer({
@@ -27,6 +31,10 @@ export function StreamPlayer({
   isLive,
   startedAt,
   clientIp,
+  onVideoClick,
+  remoteTaps,
+  deviceWidth,
+  deviceHeight,
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
@@ -186,6 +194,78 @@ export function StreamPlayer({
       document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
+  const handleVideoClick = (e: React.MouseEvent<HTMLVideoElement>) => {
+    if (!onVideoClick || !videoRef.current || !deviceWidth || !deviceHeight) return;
+    const video = videoRef.current;
+    
+    const rect = video.getBoundingClientRect();
+    const vWidth = video.videoWidth;
+    const vHeight = video.videoHeight;
+    
+    if (vWidth === 0 || vHeight === 0) return;
+
+    const videoRatio = vWidth / vHeight;
+    const elementRatio = rect.width / rect.height;
+
+    let actualWidth, actualHeight, startX, startY;
+
+    if (elementRatio > videoRatio) {
+      actualHeight = rect.height;
+      actualWidth = actualHeight * videoRatio;
+      startX = (rect.width - actualWidth) / 2;
+      startY = 0;
+    } else {
+      actualWidth = rect.width;
+      actualHeight = actualWidth / videoRatio;
+      startX = 0;
+      startY = (rect.height - actualHeight) / 2;
+    }
+
+    const clickX = e.clientX - rect.left - startX;
+    const clickY = e.clientY - rect.top - startY;
+
+    if (clickX >= 0 && clickX <= actualWidth && clickY >= 0 && clickY <= actualHeight) {
+      const relativeX = clickX / actualWidth;
+      const relativeY = clickY / actualHeight;
+      onVideoClick(Math.round(relativeX * deviceWidth), Math.round(relativeY * deviceHeight));
+    }
+  };
+
+  const getTapStyle = (tapX: number, tapY: number) => {
+    if (!videoRef.current || !deviceWidth || !deviceHeight) return { display: 'none' };
+    const video = videoRef.current;
+    const rect = video.getBoundingClientRect();
+    const vWidth = video.videoWidth;
+    const vHeight = video.videoHeight;
+    if (vWidth === 0 || vHeight === 0) return { display: 'none' };
+
+    const videoRatio = vWidth / vHeight;
+    const elementRatio = rect.width / rect.height;
+
+    let actualWidth, actualHeight, startX, startY;
+
+    if (elementRatio > videoRatio) {
+      actualHeight = rect.height;
+      actualWidth = actualHeight * videoRatio;
+      startX = (rect.width - actualWidth) / 2;
+      startY = 0;
+    } else {
+      actualWidth = rect.width;
+      actualHeight = actualWidth / videoRatio;
+      startX = 0;
+      startY = (rect.height - actualHeight) / 2;
+    }
+
+    const relativeX = tapX / deviceWidth;
+    const relativeY = tapY / deviceHeight;
+
+    return {
+      left: `${startX + (relativeX * actualWidth)}px`,
+      top: `${startY + (relativeY * actualHeight)}px`,
+      transform: 'translate(-50%, -50%)'
+    };
+  };
+
   return (
     <div
       ref={containerRef}
@@ -211,11 +291,26 @@ export function StreamPlayer({
         {/* Video Element */}
         <video
           ref={videoRef}
-          className="h-full w-full object-contain"
+          className={`h-full w-full object-contain ${onVideoClick ? "cursor-pointer" : ""}`}
           muted={muted}
           playsInline
           autoPlay
+          onClick={handleVideoClick}
         />
+
+        {/* Remote Taps Visualizer */}
+        {remoteTaps && remoteTaps.map(tap => (
+          <div
+            key={tap.ts}
+            className="absolute z-30 w-8 h-8 rounded-full border-2 border-red-500 bg-red-500/20 pointer-events-none animate-ping opacity-0"
+            style={{
+              ...getTapStyle(tap.x, tap.y),
+              animationDuration: '1s',
+              animationIterationCount: '1',
+              animationFillMode: 'forwards'
+            }}
+          />
+        ))}
 
         {/* Loading State */}
         {status === "loading" && (

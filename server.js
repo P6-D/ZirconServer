@@ -62,10 +62,12 @@ wss.on('connection', (ws) => {
                     id: ws.deviceId,
                     manufacturer: msg.manufacturer || 'Unknown',
                     model: msg.model || 'Device',
-                    version: msg.version || '?'
+                    version: msg.version || '?',
+                    screenWidth: msg.screenWidth || 0,
+                    screenHeight: msg.screenHeight || 0
                 };
                 androidSockets.set(ws.deviceId, ws);
-                console.log(`\n[DEVICE] Android device connected: ${ws.deviceId} (${ws.deviceMeta.manufacturer} ${ws.deviceMeta.model})`);
+                console.log(`\n[DEVICE] Android device connected: ${ws.deviceId} (${ws.deviceMeta.manufacturer} ${ws.deviceMeta.model}, ${ws.deviceMeta.screenWidth}x${ws.deviceMeta.screenHeight})`);
                 broadcastToBrowsers({ type: 'device_list', devices: Array.from(androidSockets.values()).map(s => s.deviceMeta) });
             } else {
                 ws._clientType = 'browser';

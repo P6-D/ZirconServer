@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useOverlayServer, SequenceStep } from "@/hooks/useOverlayServer";
 import { useStreamServer, type StreamInfo } from "@/hooks/useStreamServer";
 import { StreamPlayer } from "@/components/ui/StreamPlayer";
@@ -104,6 +106,15 @@ export default function Dashboard() {
           </div>
           <h1 className="text-sm font-semibold tracking-wide">Zircon Command Center</h1>
         </div>
+
+        <nav className="flex items-center gap-6 ml-8 mt-1.5 h-full">
+          <Link href="/" className="text-sm font-medium text-white border-b-2 border-white pb-4 pt-1">
+            Dashboard
+          </Link>
+          <Link href="/remote" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors pb-4 pt-1 border-b-2 border-transparent">
+            Remote (Exp)
+          </Link>
+        </nav>
 
         <div className="flex-1" />
 

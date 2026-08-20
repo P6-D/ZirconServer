@@ -23,7 +23,14 @@ export type SequenceStep = {
 
 type ServerState = {
   wsConnected: boolean;
-  devices: { id: string; manufacturer: string; model: string; version: string }[];
+  devices: { 
+    id: string; 
+    manufacturer: string; 
+    model: string; 
+    version: string;
+    screenWidth?: number;
+    screenHeight?: number;
+  }[];
   uptime: number;
   events: OverlayEvent[];
   stats: {

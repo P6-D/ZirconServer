@@ -136,7 +136,14 @@ export default function RemotePage() {
             <p>Waiting for RTMP stream from {activeDevice.model}...</p>
           </div>
         ) : (
-          <div className="w-full max-w-4xl aspect-[9/19] sm:aspect-[9/16] relative max-h-[85vh]">
+          <div 
+            className="relative h-[85vh] max-w-full shrink-0"
+            style={{ 
+              aspectRatio: activeDevice.screenWidth && activeDevice.screenHeight 
+                ? `${activeDevice.screenWidth}/${activeDevice.screenHeight}` 
+                : '9/16' 
+            }}
+          >
             <StreamPlayer
               streamUrl={activeStream.flvUrl}
               streamName={activeStream.name}
